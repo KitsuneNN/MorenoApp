@@ -20,8 +20,6 @@ modo_precio_venta = sa.Enum("CALCULADO", "MANUAL", name="modo_precio_venta")
 
 
 def upgrade() -> None:
-    unidad_medida.create(op.get_bind(), checkfirst=True)
-    modo_precio_venta.create(op.get_bind(), checkfirst=True)
     op.create_table(
         "productos",
         sa.Column("id", sa.Uuid(), nullable=False),
