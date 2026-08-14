@@ -1,5 +1,5 @@
 import { Stack, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { getProductByBarcode } from '@/api/productos.api';
@@ -12,27 +12,32 @@ export default function ScannerScreen() {
   const addProduct = useCartStore((state) => state.addProduct);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [scanKey, setScanKey] = useState(0);
+  const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleCodeScanned = async (barcode: string) => {
+  useEffect(() => () => {
+    if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
+  }, []);
+
+  const handleCodeScanned = async (barcode: string): Promise<boolean> => {
     setError(null);
     setSuccess(null);
     const result = await processScannedBarcode({ barcode, findProduct: getProductByBarcode, addProduct });
 
     if (result.status === 'added') {
       setSuccess(`${result.product.nombre} agregado al carrito`);
-    } else {
-      setError(result.message);
+      if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
+      feedbackTimer.current = setTimeout(() => setSuccess(null), 2_000);
+      return true;
     }
-    // Permite continuar con otro producto, incluso si se escanea el mismo
-    // código otra vez, sin obligar a salir y volver a abrir la cámara.
-    setScanKey((value) => value + 1);
+
+    setError(result.message);
+    return false;
   };
 
   return (
     <View className="flex-1">
       <Stack.Screen options={{ headerShown: false }} />
-      <BarcodeScanner key={scanKey} onCodeScanned={handleCodeScanned}>
+      <BarcodeScanner onCodeScanned={handleCodeScanned}>
         <View className="mb-5 flex-row items-center justify-between">
           <Text className="text-lg font-bold text-white">Escanear producto</Text>
           <Pressable className="rounded-xl border border-white/50 px-4 py-2" onPress={() => router.back()} accessibilityRole="button">
