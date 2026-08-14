@@ -21,6 +21,7 @@
     "babel-preset-expo": "~55.0.8",
     "decimal.js": "^10.6.0",
     "expo": "~55.0.28",
+    "expo-camera": "~55.0.21",
     "expo-constants": "~55.0.17",
     "expo-device": "~55.0.19",
     "expo-font": "~55.0.8",

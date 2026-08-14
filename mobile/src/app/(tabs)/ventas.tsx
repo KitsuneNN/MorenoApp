@@ -23,6 +23,11 @@ export default function VentasScreen() {
       <View className="pt-4">
         <View className="flex-row items-center gap-3">
           <View className="flex-1"><ProductSearch value={search} onChangeText={setSearch} /></View>
+          <Link href="/scanner" asChild>
+            <Pressable className="h-14 w-14 items-center justify-center rounded-xl border border-brand-600 bg-white" accessibilityRole="button" accessibilityLabel="Escanear código de barras">
+              <Text className="text-xs font-bold text-brand-700">Escanear</Text>
+            </Pressable>
+          </Link>
           <Link href="/carrito" asChild>
             <Pressable className="h-14 min-w-14 items-center justify-center rounded-xl bg-brand-600 px-2" accessibilityRole="button" accessibilityLabel="Abrir carrito">
               <Text className="text-xs font-bold text-white">Carrito</Text>
