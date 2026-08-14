@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     app_name: str = "MorenoApp API"
     api_v1_prefix: str = "/api/v1"
     database_url: str
+    # Durante el MVP no se usan cookies ni credenciales de navegador. Se puede
+    # restringir mediante CORS_ORIGINS al publicar la versión web.
+    cors_origins: list[str] = ["*"]
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

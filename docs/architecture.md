@@ -26,3 +26,17 @@ WHERE activo = true;
 - El cliente genera un UUID para cada intención de venta.
 - Si una venta ya existe para ese UUID, el backend devuelve esa venta.
 - Si dos solicitudes simultáneas intentan insertar el mismo UUID, el servicio captura el error de integridad dentro de un savepoint, consulta la venta creada y la devuelve. Si el UUID se reutiliza con un payload diferente, el backend responderá un conflicto en vez de tratarlo como un reintento válido.
+
+## Catálogo y consumo mobile
+
+- `GET /api/v1/productos` devuelve `items`, `page`, `page_size`, `total` y `total_pages`.
+- FastAPI habilita CORS mediante `CORS_ORIGINS`. El valor de desarrollo permite todos los orígenes mientras no haya cookies ni autenticación; antes de publicar la versión web se restringirá a los dominios reales.
+
+## Defensa de integridad para productos por unidad
+
+Además de Pydantic, PostgreSQL aplica estas restricciones:
+
+```sql
+CHECK (unidad != 'UNIDAD' OR stock = trunc(stock));
+CHECK (unidad != 'UNIDAD' OR stock_minimo = trunc(stock_minimo));
+```

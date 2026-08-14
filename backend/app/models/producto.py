@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, DateTime, Enum, Index, Numeric, String, Text, Uuid, func, text
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Enum, Index, Numeric, String, Text, Uuid, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -25,6 +25,8 @@ class ModoPrecioVenta(str, enum.Enum):
 class Producto(Base):
     __tablename__ = "productos"
     __table_args__ = (
+        CheckConstraint("unidad != 'UNIDAD' OR stock = trunc(stock)", name="ck_productos_unidad_stock_entero"),
+        CheckConstraint("unidad != 'UNIDAD' OR stock_minimo = trunc(stock_minimo)", name="ck_productos_unidad_stock_minimo_entero"),
         Index(
             "ux_productos_codigo_barra_activo",
             "codigo_barra",

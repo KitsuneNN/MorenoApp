@@ -1,3 +1,4 @@
+from math import ceil
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Response, status
@@ -22,7 +23,7 @@ def list_productos(
     db: Session = Depends(get_db),
 ) -> Page[ProductoResponse]:
     items, total = service.list(db, page=page, page_size=page_size, search=search, low_stock=low_stock, active=active)
-    return Page(items=items, page=page, page_size=page_size, total=total)
+    return Page(items=items, page=page, page_size=page_size, total=total, total_pages=ceil(total / page_size) if total else 0)
 
 
 @router.get("/barcode/{codigo_barra}", response_model=ProductoResponse)

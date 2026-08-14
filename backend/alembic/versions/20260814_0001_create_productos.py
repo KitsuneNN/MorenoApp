@@ -39,6 +39,8 @@ def upgrade() -> None:
         sa.Column("activo", sa.Boolean(), nullable=False, server_default=sa.true()),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.CheckConstraint("unidad != 'UNIDAD' OR stock = trunc(stock)", name="ck_productos_unidad_stock_entero"),
+        sa.CheckConstraint("unidad != 'UNIDAD' OR stock_minimo = trunc(stock_minimo)", name="ck_productos_unidad_stock_minimo_entero"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_productos_activo_nombre", "productos", ["activo", "nombre"], unique=False)
