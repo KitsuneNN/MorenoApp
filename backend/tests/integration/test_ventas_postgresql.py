@@ -17,12 +17,10 @@ from app.services.venta_service import VentaService
 
 TEST_DATABASE_URL = os.getenv('TEST_DATABASE_URL')
 pytestmark = pytest.mark.postgresql
-if not TEST_DATABASE_URL:
-    pytest.skip('Requires PostgreSQL: set TEST_DATABASE_URL to run integration tests.', allow_module_level=True)
-
-
 @pytest.fixture(scope='module')
 def session_factory():
+    if not TEST_DATABASE_URL:
+        pytest.skip('Requires PostgreSQL: set TEST_DATABASE_URL to run integration tests.')
     engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True)
     # These tests exercise PostgreSQL capabilities directly. A disposable test
     # database is required; never point TEST_DATABASE_URL to production.
@@ -92,3 +90,23 @@ def test_two_concurrent_sales_cannot_oversell(session_factory):
         sales = list(db.scalars(select(Venta)))
         assert final_product.stock == Decimal('0.000')
         assert len(sales) == 1
+
+def test_merged_duplicate_lines_are_validated_against_combined_stock(session_factory):
+    product = create_product(session_factory, stock='1.000')
+    payload = VentaCreate(
+        id=uuid4(),
+        items=[
+            VentaItemCreate(producto_id=product.id, cantidad='0.750'),
+            VentaItemCreate(producto_id=product.id, cantidad='0.750'),
+        ],
+    )
+
+    with session_factory() as db:
+        with pytest.raises(AppError) as error:
+            VentaService().create(db, payload)
+        assert error.value.code == 'INSUFFICIENT_STOCK'
+
+    with session_factory() as db:
+        final_product = db.get(Producto, product.id)
+        assert final_product.stock == Decimal('1.000')
+        assert list(db.scalars(select(Venta))) == []
