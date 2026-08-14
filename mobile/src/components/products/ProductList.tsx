@@ -17,6 +17,7 @@ type Props = {
   onRefresh: () => void;
   onEndReached: () => void;
   onRetry: () => void;
+  onAddProduct: (product: Product) => void;
 };
 
 export function ProductList(props: Props) {
@@ -27,7 +28,7 @@ export function ProductList(props: Props) {
     <FlatList
       data={props.products}
       keyExtractor={(item) => item.id}
-      renderItem={({ item }) => <ProductCard product={item} />}
+      renderItem={({ item }) => <ProductCard product={item} onPress={props.onAddProduct} />}
       contentContainerStyle={{ paddingTop: 16, paddingBottom: 112, flexGrow: 1 }}
       ListEmptyComponent={<EmptyState title="No encontramos productos" description="Probá con otra búsqueda o revisá el filtro seleccionado." />}
       refreshing={props.isRefetching}
