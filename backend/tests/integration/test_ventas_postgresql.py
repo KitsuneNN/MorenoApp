@@ -91,6 +91,7 @@ def test_two_concurrent_sales_cannot_oversell(session_factory):
         assert final_product.stock == Decimal('0.000')
         assert len(sales) == 1
 
+@pytest.mark.postgresql
 def test_merged_duplicate_lines_are_validated_against_combined_stock(session_factory):
     product = create_product(session_factory, stock='1.000')
     payload = VentaCreate(
