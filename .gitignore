@@ -9,3 +9,6 @@ __pycache__/
 # Expo local configuration
 mobile/.env
 mobile/.expo/
+
+# Expo web export
+mobile/dist/
