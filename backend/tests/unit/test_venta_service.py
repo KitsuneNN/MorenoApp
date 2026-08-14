@@ -31,3 +31,19 @@ def test_inactive_product_cannot_be_sold() -> None:
 
 def test_money_rounds_sale_subtotals_with_decimal() -> None:
     assert money(Decimal('999.99') * Decimal('1.750')) == Decimal('1749.98')
+
+
+def test_merged_duplicate_lines_are_validated_against_combined_stock() -> None:
+    product_id = uuid4()
+    product = Producto(
+        id=product_id, nombre='Producto con stock limitado', precio_compra=Decimal('1'), margen_ganancia=Decimal('0'),
+        precio_venta=Decimal('1'), stock=Decimal('1.000'), stock_minimo=Decimal('0'), unidad=UnidadMedida.LITRO, activo=True,
+    )
+    merged = merge_items([
+        VentaItemCreate(producto_id=product_id, cantidad='0.750'),
+        VentaItemCreate(producto_id=product_id, cantidad='0.750'),
+    ])
+
+    assert merged[0].cantidad == Decimal('1.500')
+    with pytest.raises(AppError, match='Stock insuficiente'):
+        VentaService._validate_sellable(product, merged[0].cantidad)
