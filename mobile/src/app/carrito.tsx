@@ -1,6 +1,6 @@
 import { Stack, useRouter } from 'expo-router';
 import { randomUUID } from 'expo-crypto';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
 
 import { CartItem } from '@/components/cart/CartItem';
@@ -12,6 +12,7 @@ import { useCartStore } from '@/stores/cart.store';
 export default function CartScreen() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const saleAttempt = useRef<{ id: string; fingerprint: string } | null>(null);
   const createSale = useCreateSale();
   const items = useCartStore((state) => state.items);
   const increment = useCartStore((state) => state.increment);
@@ -24,9 +25,19 @@ export default function CartScreen() {
   const confirmSale = async () => {
     if (!items.length || createSale.isPending) return;
     setError(null);
-    const saleId = randomUUID();
+    const saleItems = items.map((item) => ({ producto_id: item.productId, cantidad: item.cantidad }));
+    const cartFingerprint = [...saleItems]
+      .sort((left, right) => left.producto_id.localeCompare(right.producto_id))
+      .map((item) => `${item.producto_id}:${item.cantidad}`)
+      .join('|');
+    // Ante un timeout, el mismo carrito conserva su UUID y el POST es idempotente.
+    // Si el usuario modifica el carrito, se genera deliberadamente un UUID nuevo.
+    if (!saleAttempt.current || saleAttempt.current.fingerprint !== cartFingerprint) {
+      saleAttempt.current = { id: randomUUID(), fingerprint: cartFingerprint };
+    }
     try {
-      const sale = await createSale.mutateAsync({ id: saleId, items: items.map((item) => ({ producto_id: item.productId, cantidad: item.cantidad })) });
+      const sale = await createSale.mutateAsync({ id: saleAttempt.current.id, items: saleItems });
+      saleAttempt.current = null;
       clearCart();
       router.replace({ pathname: '/venta/[id]', params: { id: sale.id } });
     } catch (unknownError) {
