@@ -1,0 +1,11 @@
+
+# Python
+backend/.venv/
+backend/.env
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Expo local configuration
+mobile/.env
+mobile/.expo/
