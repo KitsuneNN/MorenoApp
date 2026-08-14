@@ -16,23 +16,32 @@ function cart() {
 }
 
 describe('cart state', () => {
-  it('adds a product and increments an existing line instead of duplicating it', () => {
+  it('adds a product as a new line', () => {
+    const store = cart();
+    expect(store.getState().addProduct(bleach)).toBe(true);
+    expect(store.getState().items).toHaveLength(1);
+    expect(store.getState().items[0].cantidad).toBe('1.000');
+  });
+
+  it('increments an existing product instead of duplicating its line', () => {
     const store = cart();
     store.getState().addProduct(bleach);
     store.getState().addProduct(bleach);
-
     expect(store.getState().items).toHaveLength(1);
     expect(store.getState().items[0].cantidad).toBe('2.000');
   });
 
-  it('supports fractional quantity outside UNIDAD and retains decimal precision in subtotal', () => {
+  it('accepts and normalizes fractional quantity outside UNIDAD', () => {
     const store = cart();
-    store.getState().addProduct(detergent, '0.5');
+    expect(store.getState().addProduct(detergent, '0.5')).toBe(true);
     store.getState().addProduct(detergent, '1.250');
-
     expect(store.getState().items[0].cantidad).toBe('1.750');
+  });
+
+  it('calculates a fractional-line subtotal with decimal precision', () => {
+    const store = cart();
+    store.getState().addProduct(detergent, '1.750');
     expect(store.getState().getItemSubtotal(detergent.id)).toBe('1749.98');
-    expect(store.getState().getTotal()).toBe('1749.98');
   });
 
   it('rejects fractional quantities for UNIDAD', () => {
@@ -41,20 +50,18 @@ describe('cart state', () => {
     expect(store.getState().items).toHaveLength(0);
   });
 
-  it('calculates total with decimal arithmetic for 999.99 amounts', () => {
+  it('calculates totals accurately with 999.99 monetary amounts', () => {
     const store = cart();
     store.getState().addProduct(detergent, '0.5');
     store.getState().addProduct(bleach, '2');
-
     expect(store.getState().getItemSubtotal(detergent.id)).toBe('500.00');
     expect(store.getState().getTotal()).toBe('520.20');
   });
 
-  it('decrements and removes a line when the quantity reaches zero', () => {
+  it('decrements and removes a line when its quantity reaches zero', () => {
     const store = cart();
     store.getState().addProduct(bleach);
     store.getState().decrement(bleach.id);
-
     expect(store.getState().items).toHaveLength(0);
   });
 
@@ -62,7 +69,18 @@ describe('cart state', () => {
     const store = cart();
     store.getState().addProduct(detergent);
     store.getState().removeItem(detergent.id);
-
     expect(store.getState().items).toHaveLength(0);
+  });
+
+  it('keeps persisted cart values JSON-safe strings, never Decimal instances', () => {
+    const store = cart();
+    store.getState().addProduct(detergent, '0.5');
+    const persisted = JSON.parse(JSON.stringify({ items: store.getState().items }));
+    const item = persisted.items[0];
+
+    expect(item.precioUnitario).toBe('999.99');
+    expect(item.cantidad).toBe('0.500');
+    expect(typeof item.precioUnitario).toBe('string');
+    expect(typeof item.cantidad).toBe('string');
   });
 });
