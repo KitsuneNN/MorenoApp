@@ -72,6 +72,7 @@ export function BarcodeScanner({ onCodeScanned, children }: Props) {
       <CameraView
         className="flex-1"
         facing="back"
+        autofocus="on"
         barcodeScannerSettings={{ barcodeTypes: [...SUPPORTED_BARCODE_TYPES] }}
         onBarcodeScanned={isProcessing || isCoolingDown ? undefined : handleBarcodeScanned}
       />
