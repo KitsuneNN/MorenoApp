@@ -1,5 +1,4 @@
 import { Stack, useRouter } from 'expo-router';
-import { randomUUID } from 'expo-crypto';
 import { useRef, useState } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
 
@@ -8,6 +7,7 @@ import { CartSummary } from '@/components/cart/CartSummary';
 import { EmptyState } from '@/components/common/EmptyState';
 import { useCreateSale } from '@/hooks/useCreateSale';
 import { useCartStore } from '@/stores/cart.store';
+import { generateUuidV4 } from '@/utils/uuid';
 
 export default function CartScreen() {
   const router = useRouter();
@@ -33,7 +33,7 @@ export default function CartScreen() {
     // Ante un timeout, el mismo carrito conserva su UUID y el POST es idempotente.
     // Si el usuario modifica el carrito, se genera deliberadamente un UUID nuevo.
     if (!saleAttempt.current || saleAttempt.current.fingerprint !== cartFingerprint) {
-      saleAttempt.current = { id: randomUUID(), fingerprint: cartFingerprint };
+      saleAttempt.current = { id: generateUuidV4(), fingerprint: cartFingerprint };
     }
     try {
       const sale = await createSale.mutateAsync({ id: saleAttempt.current.id, items: saleItems });
