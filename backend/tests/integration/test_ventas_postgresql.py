@@ -11,14 +11,18 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.database import Base
 from app.core.exceptions import AppError
-from app.models import Producto, UnidadMedida, Venta
+from app.models import DetalleVenta, Producto, UnidadMedida, Venta
 from app.schemas.venta import VentaCreate, VentaItemCreate
 from app.services.venta_service import VentaService
 
 TEST_DATABASE_URL = os.getenv('TEST_DATABASE_URL')
 pytestmark = pytest.mark.postgresql
-@pytest.fixture(scope='module')
+@pytest.fixture()
 def session_factory():
+    # Function-scoped on purpose: each test needs a pristine schema. A
+    # module-scoped factory leaked the venta committed by the concurrency test
+    # into this module's whole-table emptiness asserts, failing them with a
+    # row the rejected sale never created.
     if not TEST_DATABASE_URL:
         pytest.skip('Requires PostgreSQL: set TEST_DATABASE_URL to run integration tests.')
     engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True)
@@ -110,4 +114,26 @@ def test_merged_duplicate_lines_are_validated_against_combined_stock(session_fac
     with session_factory() as db:
         final_product = db.get(Producto, product.id)
         assert final_product.stock == Decimal('1.000')
+        assert db.get(Venta, payload.id) is None
         assert list(db.scalars(select(Venta))) == []
+        assert list(db.scalars(select(DetalleVenta))) == []
+
+
+def test_rejected_single_line_sale_leaves_no_rows(session_factory):
+    # General regression guard (no line merging involved): a sale whose single
+    # line exceeds stock must not persist the venta, its detalles, nor any
+    # stock change.
+    product = create_product(session_factory, stock='1.000')
+    payload = VentaCreate(id=uuid4(), items=[VentaItemCreate(producto_id=product.id, cantidad='2.000')])
+
+    with session_factory() as db:
+        with pytest.raises(AppError) as error:
+            VentaService().create(db, payload)
+        assert error.value.code == 'INSUFFICIENT_STOCK'
+
+    with session_factory() as db:
+        final_product = db.get(Producto, product.id)
+        assert final_product.stock == Decimal('1.000')
+        assert db.get(Venta, payload.id) is None
+        assert list(db.scalars(select(Venta))) == []
+        assert list(db.scalars(select(DetalleVenta))) == []
