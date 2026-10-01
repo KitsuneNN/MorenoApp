@@ -29,17 +29,24 @@ class ProductoService:
         return producto
 
     def create(self, db: Session, data: ProductoCreate) -> Producto:
-        return self._save(db, Producto(**data.model_dump()))
+        producto = Producto(**data.model_dump())
+        self._recalculate_price_if_calculated(producto)
+        return self._save(db, producto)
 
     def update(self, db: Session, producto_id: UUID, data: ProductoUpdate) -> Producto:
         producto = self.get(db, producto_id)
         for field, value in data.model_dump(exclude_unset=True).items():
-            if field != "activo":
+            # `activo` solo cambia por baja lógica/reactivación; `stock` solo por
+            # PATCH /stock (con FOR UPDATE) para no pisar ventas concurrentes.
+            if field not in ("activo", "stock"):
                 setattr(producto, field, value)
+        self._recalculate_price_if_calculated(producto)
         return self._save(db, producto)
 
     def update_stock(self, db: Session, producto_id: UUID, data: ProductoStockUpdate) -> Producto:
-        producto = self.get(db, producto_id)
+        producto = self.repository.get_by_id_for_update(db, producto_id)
+        if not producto:
+            raise AppError("Producto no encontrado", "PRODUCT_NOT_FOUND", 404)
         if producto.unidad.value == "UNIDAD" and data.stock != data.stock.to_integral_value():
             raise AppError("El stock debe ser entero para productos por unidad", "INVALID_QUANTITY")
         producto.stock = data.stock
@@ -62,6 +69,25 @@ class ProductoService:
         producto = self.get(db, producto_id)
         producto.activo = False
         self._save(db, producto)
+
+    def reactivate(self, db: Session, producto_id: UUID) -> Producto:
+        producto = self.get(db, producto_id)
+        if producto.activo:
+            # Idempotente: reactivar un producto activo no genera error ni escritura.
+            return producto
+        producto.activo = True
+        # Si otro producto activo ya usa el mismo código de barras, el índice
+        # parcial (D2) dispara IntegrityError y _save lo mapea a
+        # BARCODE_ALREADY_EXISTS.
+        return self._save(db, producto)
+
+    @staticmethod
+    def _recalculate_price_if_calculated(producto: Producto) -> None:
+        # En altas y ediciones el precio de venta en modo CALCULADO siempre se
+        # deriva de compra y margen; el precio recibido se ignora. El schema
+        # exige ambos campos, así que un 422 ocurre antes de llegar acá.
+        if producto.modo_precio_venta == ModoPrecioVenta.CALCULADO:
+            producto.precio_venta = decimal_money(producto.precio_compra * (1 + producto.margen_ganancia / 100))
 
     @staticmethod
     def _save(db: Session, producto: Producto) -> Producto:

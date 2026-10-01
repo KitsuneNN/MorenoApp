@@ -60,3 +60,9 @@ def update_price(producto_id: UUID, data: ProductoPrecioUpdate, db: Session = De
 def delete_producto(producto_id: UUID, db: Session = Depends(get_db)) -> Response:
     service.deactivate(db, producto_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/{producto_id}/reactivar", response_model=ProductoResponse)
+def reactivate_producto(producto_id: UUID, db: Session = Depends(get_db)) -> ProductoResponse:
+    # 409 BARCODE_ALREADY_EXISTS si otro producto activo ya usa el código (D2).
+    return service.reactivate(db, producto_id)

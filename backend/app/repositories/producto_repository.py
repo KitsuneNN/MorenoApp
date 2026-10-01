@@ -10,6 +10,11 @@ class ProductoRepository:
     def get_by_id(self, db: Session, producto_id: UUID) -> Producto | None:
         return db.scalar(select(Producto).where(Producto.id == producto_id))
 
+    def get_by_id_for_update(self, db: Session, producto_id: UUID) -> Producto | None:
+        # Serializa el ajuste de stock con las ventas (D4): mismas reglas de
+        # locking que usa VentaService para descontar stock.
+        return db.scalar(select(Producto).where(Producto.id == producto_id).with_for_update())
+
     def get_by_barcode(self, db: Session, codigo_barra: str) -> Producto | None:
         return db.scalar(select(Producto).where(Producto.codigo_barra == codigo_barra, Producto.activo.is_(True)))
 
