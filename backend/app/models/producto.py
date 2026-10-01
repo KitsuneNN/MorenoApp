@@ -27,6 +27,16 @@ class Producto(Base):
     __table_args__ = (
         CheckConstraint("unidad != 'UNIDAD' OR stock = trunc(stock)", name="ck_productos_unidad_stock_entero"),
         CheckConstraint("unidad != 'UNIDAD' OR stock_minimo = trunc(stock_minimo)", name="ck_productos_unidad_stock_minimo_entero"),
+        CheckConstraint(
+            "origen_codigo IS NULL OR origen_codigo IN ('INTERNO', 'EXISTENTE')",
+            name="ck_productos_origen_codigo_valido",
+        ),
+        # Paridad: tener codigo y tener origen de codigo son la misma cosa.
+        # Los historicos sin codigo cumplen NULL <=> NULL.
+        CheckConstraint(
+            "(codigo_barra IS NULL) = (origen_codigo IS NULL)",
+            name="ck_productos_codigo_origen_paridad",
+        ),
         Index(
             "ux_productos_codigo_barra_activo",
             "codigo_barra",
@@ -38,6 +48,8 @@ class Producto(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     codigo_barra: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    # INTERNO / EXISTENTE. NULL unicamente para historicos sin codigo.
+    origen_codigo: Mapped[str | None] = mapped_column(String(7), nullable=True)
     nombre: Mapped[str] = mapped_column(String(160), nullable=False)
     imagen_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     imagen_public_id: Mapped[str | None] = mapped_column(String(255), nullable=True)

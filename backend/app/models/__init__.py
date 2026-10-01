@@ -5,3 +5,7 @@ __all__ = ["Producto", "UnidadMedida", "ModoPrecioVenta"]
 from app.models.venta import DetalleVenta, Venta
 
 __all__ += ['Venta', 'DetalleVenta']
+
+from app.models.codigo_interno import CodigoInterno, Contador
+
+__all__ += ['CodigoInterno', 'Contador']
